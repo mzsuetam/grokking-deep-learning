@@ -188,4 +188,5 @@ fabric.properties
 # book pdf
 *.pdf
 
-data/
+data/*
+!data/fetch_data.sh
