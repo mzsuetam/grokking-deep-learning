@@ -33,7 +33,8 @@ class Tensor:
                 grad = Tensor(np.ones_like(self.data))
             if grad_origin is not None:
                 if self.children[grad_origin.id] == 0:
-                    raise Exception("cannot backprop more than once")
+                    return
+                    # raise Exception("cannot backprop more than once")
                 else:
                     self.children[grad_origin.id] -= 1
 
@@ -42,6 +43,14 @@ class Tensor:
         else:
             self.grad += grad
 
+
+        # grads must not have grads of their own
+        assert grad.autograd is False
+
+        # only continue backpropping if there's something to
+        # backprop into and if all gradients (from children)
+        # are accounted for override waiting for children if
+        # "backprop" was called on this variable directly
         if self.creators is not None and (self.all_children_grads_accounted_for() or grad_origin is None):
             if self.creation_op == "add":
                 self.creators[0].backward(self.grad, self)
@@ -59,12 +68,12 @@ class Tensor:
                 t = self.grad * self.creators[0]
                 self.creators[1].backward(t, self)
             elif self.creation_op == "mm":
-                act = self.creators[0]
-                weights = self.creators[1]
-                t = self.grad.mm(weights.transpose())
-                act.backward(t)
-                t = self.grad.transpose().mm(act).transpose()
-                weights.backward(t)
+                c0 = self.creators[0]
+                c1 = self.creators[1]
+                t = self.grad.mm(c1.transpose())
+                c0.backward(t)
+                t = self.grad.transpose().mm(c0).transpose()
+                c1.backward(t)
             elif self.creation_op == "transpose":
                 self.creators[0].backward(self.grad.transpose())
             elif "sum" in self.creation_op:
@@ -141,7 +150,8 @@ class Tensor:
 
     def sigmoid(self):
         if self.autograd:
-            return Tensor(1 / (1 + np.exp(-self.data)), autograd=True, creators=[self], creation_op="sigmoid")
+            return Tensor(1 / (1 + np.exp(-self.data)), autograd=True, creators=[self],
+                          creation_op="sigmoid")
         return Tensor(1 / (1 + np.exp(-self.data)))
 
     def tanh(self):
@@ -155,6 +165,13 @@ class Tensor:
             new.index_select_indices = indices
             return new
         return Tensor(self.data[indices.data])
+
+    def softmax(self):
+        temp = np.exp(self.data)
+        softmax_output = temp / np.sum(temp,
+                                       axis=len(self.data.shape) - 1,
+                                       keepdims=True)
+        return softmax_output
 
     def cross_entropy(self, target_indices):
         temp = np.exp(self.data)
