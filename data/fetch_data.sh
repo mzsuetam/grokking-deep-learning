@@ -22,6 +22,6 @@ else
 
   # For chapter 14
   mkdir $DIRNAME/shakespeare -p
-  wget https://github.com/karpathy/char-rnn/blob/master/data/tinyshakespeare/input.txt -O $DIRNAME/shakespeare/shakespeare.txt
+  wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt -O $DIRNAME/shakespeare/shakespeare.txt
 
 fi
